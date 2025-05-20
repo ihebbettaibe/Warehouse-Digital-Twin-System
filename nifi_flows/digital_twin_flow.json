@@ -1,69 +1,301 @@
-{
-  "comments": "Digital Twin NiFi Flow Template",
-  "processors": [
-    {
-      "name": "ConsumeKafka",
-      "type": "org.apache.nifi.processors.kafka.pubsub.ConsumeKafkaRecord_2_0",
-      "properties": {
-        "bootstrap.servers": "kafka:9093",
-        "topic_name": "warehouse-sensors-.*",
-        "topic_type": "pattern",
-        "record-reader": "JsonTreeReader",
-        "record-writer": "JsonRecordSetWriter",
-        "group.id": "nifi-digital-twin",
-        "auto.offset.reset": "latest"
-      },
-      "autoTerminatedRelationships": []
-    },
-    {
-      "name": "UpdateAttribute",
-      "type": "org.apache.nifi.processors.attributes.UpdateAttribute",
-      "properties": {
-        "topic": "${kafka.topic}"
-      },
-      "autoTerminatedRelationships": []
-    },
-    {
-      "name": "SplitJson",
-      "type": "org.apache.nifi.processors.standard.SplitJson",
-      "properties": {
-        "JsonPath Expression": "$.*"
-      },
-      "autoTerminatedRelationships": ["failure", "original"]
-    },
-    {
-      "name": "EvaluateJsonPath",
-      "type": "org.apache.nifi.processors.standard.EvaluateJsonPath",
-      "properties": {
-        "sensor_id": "$.sensor_id",
-        "sensor_type": "$.sensor_type",
-        "value": "$.value",
-        "timestamp": "$.timestamp",
-        "zone": "$.zone",
-        "Destination": "flowfile-attribute"
-      },
-      "autoTerminatedRelationships": ["failure"]
-    },
-    {
-      "name": "RouteOnAttribute",
-      "type": "org.apache.nifi.processors.standard.RouteOnAttribute",
-      "properties": {
-        "temperature": "${sensor_type:equals('temperature')}",
-        "humidity": "${sensor_type:equals('humidity')}",
-        "motion": "${sensor_type:equals('motion')}",
-        "door_status": "${sensor_type:equals('door_status')}",
-        "battery_level": "${sensor_type:equals('battery_level')}",
-        "weight": "${sensor_type:equals('weight')}",
-        "pressure": "${sensor_type:equals('pressure')}"
-      },
-      "autoTerminatedRelationships": ["unmatched"]
-    },
-    {
-      "name": "DetectAnomaly",
-      "type": "org.apache.nifi.processors.standard.ExecuteScript",
-      "properties": {
-        "Script Engine": "python",
-        "Script Body": "
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<template encoding-version="1.3">
+    <description>Digital Twin NiFi Flow Template for processing warehouse sensor data with anomaly detection</description>
+    <groupId>DigitalTwinTemplateID</groupId>
+    <name>Digital Twin NiFi Flow</name>
+    <snippet>
+        <controllerServices>
+            <controllerService>
+                <id>JsonTreeReader</id>
+                <name>JsonTreeReader</name>
+                <type>org.apache.nifi.json.JsonTreeReader</type>
+                <bundle>
+                    <group>org.apache.nifi</group>
+                    <artifact>nifi-record-serialization-services-nar</artifact>
+                    <version>1.16.0</version>
+                </bundle>
+                <property>
+                    <name>Date Format</name>
+                    <value>yyyy-MM-dd'T'HH:mm:ss.SSS'Z'</value>
+                </property>
+                <property>
+                    <name>Timestamp Format</name>
+                    <value>yyyy-MM-dd'T'HH:mm:ss.SSS'Z'</value>
+                </property>
+            </controllerService>
+            <controllerService>
+                <id>JsonRecordSetWriter</id>
+                <name>JsonRecordSetWriter</name>
+                <type>org.apache.nifi.json.JsonRecordSetWriter</type>
+                <bundle>
+                    <group>org.apache.nifi</group>
+                    <artifact>nifi-record-serialization-services-nar</artifact>
+                    <version>1.16.0</version>
+                </bundle>
+                <property>
+                    <name>Schema Write Strategy</name>
+                    <value>no-schema</value>
+                </property>
+                <property>
+                    <name>Date Format</name>
+                    <value>yyyy-MM-dd'T'HH:mm:ss.SSS'Z'</value>
+                </property>
+                <property>
+                    <name>Timestamp Format</name>
+                    <value>yyyy-MM-dd'T'HH:mm:ss.SSS'Z'</value>
+                </property>
+                <property>
+                    <name>Pretty Print JSON</name>
+                    <value>true</value>
+                </property>
+            </controllerService>
+        </controllerServices>
+        <processors>
+            <processor>
+                <id>ConsumeKafka</id>
+                <name>ConsumeKafka</name>
+                <position>
+                    <x>0</x>
+                    <y>0</y>
+                </position>
+                <type>org.apache.nifi.processors.kafka.pubsub.ConsumeKafkaRecord_2_0</type>
+                <bundle>
+                    <group>org.apache.nifi</group>
+                    <artifact>nifi-kafka-2-0-nar</artifact>
+                    <version>1.16.0</version>
+                </bundle>
+                <property>
+                    <name>bootstrap.servers</name>
+                    <value>kafka:9093</value>
+                </property>
+                <property>
+                    <name>topic</name>
+                    <value>warehouse-sensors-.*</value>
+                </property>
+                <property>
+                    <name>topic_type</name>
+                    <value>pattern</value>
+                </property>
+                <property>
+                    <name>record-reader</name>
+                    <value>JsonTreeReader</value>
+                </property>
+                <property>
+                    <name>record-writer</name>
+                    <value>JsonRecordSetWriter</value>
+                </property>
+                <property>
+                    <name>group.id</name>
+                    <value>nifi-digital-twin</value>
+                </property>
+                <property>
+                    <name>auto.offset.reset</name>
+                    <value>latest</value>
+                </property>
+                <scheduling>
+                    <strategy>TIMER_DRIVEN</strategy>
+                    <period>0 sec</period>
+                    <concurrentTasks>1</concurrentTasks>
+                </scheduling>
+                <executionNode>ALL</executionNode>
+                <penaltyDuration>30 sec</penaltyDuration>
+                <yieldDuration>1 sec</yieldDuration>
+                <bulletinLevel>WARN</bulletinLevel>
+                <lossTolerant>false</lossTolerant>
+                <runDurationNanos>0</runDurationNanos>
+                <autoTerminatedRelationships />
+            </processor>
+            <processor>
+                <id>UpdateAttribute</id>
+                <name>UpdateAttribute</name>
+                <position>
+                    <x>0</x>
+                    <y>150</y>
+                </position>
+                <type>org.apache.nifi.processors.attributes.UpdateAttribute</type>
+                <bundle>
+                    <group>org.apache.nifi</group>
+                    <artifact>nifi-update-attribute-nar</artifact>
+                    <version>1.16.0</version>
+                </bundle>
+                <property>
+                    <name>topic</name>
+                    <value>${kafka.topic}</value>
+                </property>
+                <scheduling>
+                    <strategy>TIMER_DRIVEN</strategy>
+                    <period>0 sec</period>
+                    <concurrentTasks>1</concurrentTasks>
+                </scheduling>
+                <executionNode>ALL</executionNode>
+                <penaltyDuration>30 sec</penaltyDuration>
+                <yieldDuration>1 sec</yieldDuration>
+                <bulletinLevel>WARN</bulletinLevel>
+                <lossTolerant>false</lossTolerant>
+                <runDurationNanos>0</runDurationNanos>
+                <autoTerminatedRelationships />
+            </processor>
+            <processor>
+                <id>SplitJson</id>
+                <name>SplitJson</name>
+                <position>
+                    <x>0</x>
+                    <y>300</y>
+                </position>
+                <type>org.apache.nifi.processors.standard.SplitJson</type>
+                <bundle>
+                    <group>org.apache.nifi</group>
+                    <artifact>nifi-standard-nar</artifact>
+                    <version>1.16.0</version>
+                </bundle>
+                <property>
+                    <name>JsonPath Expression</name>
+                    <value>$.*</value>
+                </property>
+                <scheduling>
+                    <strategy>TIMER_DRIVEN</strategy>
+                    <period>0 sec</period>
+                    <concurrentTasks>1</concurrentTasks>
+                </scheduling>
+                <executionNode>ALL</executionNode>
+                <penaltyDuration>30 sec</penaltyDuration>
+                <yieldDuration>1 sec</yieldDuration>
+                <bulletinLevel>WARN</bulletinLevel>
+                <lossTolerant>false</lossTolerant>
+                <runDurationNanos>0</runDurationNanos>
+                <autoTerminatedRelationships>
+                    <relationship>failure</relationship>
+                    <relationship>original</relationship>
+                </autoTerminatedRelationships>
+            </processor>
+            <processor>
+                <id>EvaluateJsonPath</id>
+                <name>EvaluateJsonPath</name>
+                <position>
+                    <x>0</x>
+                    <y>450</y>
+                </position>
+                <type>org.apache.nifi.processors.standard.EvaluateJsonPath</type>
+                <bundle>
+                    <group>org.apache.nifi</group>
+                    <artifact>nifi-standard-nar</artifact>
+                    <version>1.16.0</version>
+                </bundle>
+                <property>
+                    <name>sensor_id</name>
+                    <value>$.sensor_id</value>
+                </property>
+                <property>
+                    <name>sensor_type</name>
+                    <value>$.sensor_type</value>
+                </property>
+                <property>
+                    <name>value</name>
+                    <value>$.value</value>
+                </property>
+                <property>
+                    <name>timestamp</name>
+                    <value>$.timestamp</value>
+                </property>
+                <property>
+                    <name>zone</name>
+                    <value>$.zone</value>
+                </property>
+                <property>
+                    <name>Destination</name>
+                    <value>flowfile-attribute</value>
+                </property>
+                <scheduling>
+                    <strategy>TIMER_DRIVEN</strategy>
+                    <period>0 sec</period>
+                    <concurrentTasks>1</concurrentTasks>
+                </scheduling>
+                <executionNode>ALL</executionNode>
+                <penaltyDuration>30 sec</penaltyDuration>
+                <yieldDuration>1 sec</yieldDuration>
+                <bulletinLevel>WARN</bulletinLevel>
+                <lossTolerant>false</lossTolerant>
+                <runDurationNanos>0</runDurationNanos>
+                <autoTerminatedRelationships>
+                    <relationship>failure</relationship>
+                </autoTerminatedRelationships>
+            </processor>
+            <processor>
+                <id>RouteOnAttribute</id>
+                <name>RouteOnAttribute</name>
+                <position>
+                    <x>0</x>
+                    <y>600</y>
+                </position>
+                <type>org.apache.nifi.processors.standard.RouteOnAttribute</type>
+                <bundle>
+                    <group>org.apache.nifi</group>
+                    <artifact>nifi-standard-nar</artifact>
+                    <version>1.16.0</version>
+                </bundle>
+                <property>
+                    <name>temperature</name>
+                    <value>${sensor_type:equals('temperature')}</value>
+                </property>
+                <property>
+                    <name>humidity</name>
+                    <value>${sensor_type:equals('humidity')}</value>
+                </property>
+                <property>
+                    <name>motion</name>
+                    <value>${sensor_type:equals('motion')}</value>
+                </property>
+                <property>
+                    <name>door_status</name>
+                    <value>${sensor_type:equals('door_status')}</value>
+                </property>
+                <property>
+                    <name>battery_level</name>
+                    <value>${sensor_type:equals('battery_level')}</value>
+                </property>
+                <property>
+                    <name>weight</name>
+                    <value>${sensor_type:equals('weight')}</value>
+                </property>
+                <property>
+                    <name>pressure</name>
+                    <value>${sensor_type:equals('pressure')}</value>
+                </property>
+                <scheduling>
+                    <strategy>TIMER_DRIVEN</strategy>
+                    <period>0 sec</period>
+                    <concurrentTasks>1</concurrentTasks>
+                </scheduling>
+                <executionNode>ALL</executionNode>
+                <penaltyDuration>30 sec</penaltyDuration>
+                <yieldDuration>1 sec</yieldDuration>
+                <bulletinLevel>WARN</bulletinLevel>
+                <lossTolerant>false</lossTolerant>
+                <runDurationNanos>0</runDurationNanos>
+                <autoTerminatedRelationships>
+                    <relationship>unmatched</relationship>
+                </autoTerminatedRelationships>
+            </processor>
+            <processor>
+                <id>DetectAnomaly</id>
+                <name>DetectAnomaly</name>
+                <position>
+                    <x>0</x>
+                    <y>750</y>
+                </position>
+                <type>org.apache.nifi.processors.standard.ExecuteScript</type>
+                <bundle>
+                    <group>org.apache.nifi</group>
+                    <artifact>nifi-scripting-nar</artifact>
+                    <version>1.16.0</version>
+                </bundle>
+                <property>
+                    <name>Script Engine</name>
+                    <value>python</value>
+                </property>
+                <property>
+                    <name>Script Body</name>
+                    <value>
 import json
 from org.apache.commons.io import IOUtils
 from java.nio.charset import StandardCharsets
@@ -114,109 +346,279 @@ if flowFile != None:
         session.transfer(flowFile, REL_SUCCESS)
     except Exception as e:
         session.transfer(flowFile, REL_FAILURE)
-        session.getProvenanceReporter().modifyContent(flowFile, \"Script execution failed: \" + str(e))
-"
-      },
-      "autoTerminatedRelationships": []
-    },
-    {
-      "name": "PublishKafka",
-      "type": "org.apache.nifi.processors.kafka.pubsub.PublishKafkaRecord_2_0",
-      "properties": {
-        "bootstrap.servers": "kafka:9093",
-        "topic": "warehouse-processed",
-        "record-reader": "JsonTreeReader",
-        "record-writer": "JsonRecordSetWriter",
-        "acks": "all"
-      },
-      "autoTerminatedRelationships": ["failure"]
-    },
-    {
-      "name": "AlertOnAnomaly",
-      "type": "org.apache.nifi.processors.standard.RouteOnAttribute",
-      "properties": {
-        "anomaly_detected": "${is_anomaly:equals(true)}"
-      },
-      "autoTerminatedRelationships": ["unmatched"]
-    },
-    {
-      "name": "PublishAlert",
-      "type": "org.apache.nifi.processors.kafka.pubsub.PublishKafkaRecord_2_0",
-      "properties": {
-        "bootstrap.servers": "kafka:9093",
-        "topic": "warehouse-alerts",
-        "record-reader": "JsonTreeReader",
-        "record-writer": "JsonRecordSetWriter",
-        "acks": "all"
-      },
-      "autoTerminatedRelationships": ["failure"]
-    }
-  ],
-  "connections": [
-    {
-      "from": "ConsumeKafka",
-      "to": "UpdateAttribute",
-      "relationship": "success"
-    },
-    {
-      "from": "UpdateAttribute",
-      "to": "SplitJson",
-      "relationship": "success"
-    },
-    {
-      "from": "SplitJson",
-      "to": "EvaluateJsonPath",
-      "relationship": "split"
-    },
-    {
-      "from": "EvaluateJsonPath",
-      "to": "RouteOnAttribute",
-      "relationship": "matched"
-    },
-    {
-      "from": "RouteOnAttribute",
-      "to": "DetectAnomaly",
-      "relationship": "temperature,humidity,motion,door_status,battery_level,weight,pressure"
-    },
-    {
-      "from": "DetectAnomaly",
-      "to": "PublishKafka",
-      "relationship": "success"
-    },
-    {
-      "from": "DetectAnomaly",
-      "to": "AlertOnAnomaly",
-      "relationship": "success"
-    },
-    {
-      "from": "AlertOnAnomaly",
-      "to": "PublishAlert",
-      "relationship": "anomaly_detected"
-    },
-    {
-      "from": "DetectAnomaly",
-      "to": "EvaluateJsonPath",
-      "relationship": "failure"
-    }
-  ],
-  "controllerServices": [
-    {
-      "name": "JsonTreeReader",
-      "type": "org.apache.nifi.json.JsonTreeReader",
-      "properties": {
-        "Date Format": "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",
-        "Timestamp Format": "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"
-      }
-    },
-    {
-      "name": "JsonRecordSetWriter",
-      "type": "org.apache.nifi.json.JsonRecordSetWriter",
-      "properties": {
-        "Schema Write Strategy": "no-schema",
-        "Date Format": "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",
-        "Timestamp Format": "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",
-        "Pretty Print JSON": "true"
-      }
-    }
-  ]
-}
+        session.getProvenanceReporter().modifyContent(flowFile, "Script execution failed: " + str(e))
+                    </value>
+                </property>
+                <scheduling>
+                    <strategy>TIMER_DRIVEN</strategy>
+                    <period>0 sec</period>
+                    <concurrentTasks>1</concurrentTasks>
+                </scheduling>
+                <executionNode>ALL</executionNode>
+                <penaltyDuration>30 sec</penaltyDuration>
+                <yieldDuration>1 sec</yieldDuration>
+                <bulletinLevel>WARN</bulletinLevel>
+                <lossTolerant>false</lossTolerant>
+                <runDurationNanos>0</runDurationNanos>
+                <autoTerminatedRelationships />
+            </processor>
+            <processor>
+                <id>PublishKafka</id>
+                <name>PublishKafka</name>
+                <position>
+                    <x>0</x>
+                    <y>900</y>
+                </position>
+                <type>org.apache.nifi.processors.kafka.pubsub.PublishKafkaRecord_2_0</type>
+                <bundle>
+                    <group>org.apache.nifi</group>
+                    <artifact>nifi-kafka-2-0-nar</artifact>
+                    <version>1.16.0</version>
+                </bundle>
+                <property>
+                    <name>bootstrap.servers</name>
+                    <value>kafka:9093</value>
+                </property>
+                <property>
+                    <name>topic</name>
+                    <value>warehouse-processed</value>
+                </property>
+                <property>
+                    <name>record-reader</name>
+                    <value>JsonTreeReader</value>
+                </property>
+                <property>
+                    <name>record-writer</name>
+                    <value>JsonRecordSetWriter</value>
+                </property>
+                <property>
+                    <name>acks</name>
+                    <value>all</value>
+                </property>
+                <scheduling>
+                    <strategy>TIMER_DRIVEN</strategy>
+                    <period>0 sec</period>
+                    <concurrentTasks>1</concurrentTasks>
+                </scheduling>
+                <executionNode>ALL</executionNode>
+                <penaltyDuration>30 sec</penaltyDuration>
+                <yieldDuration>1 sec</yieldDuration>
+                <bulletinLevel>WARN</bulletinLevel>
+                <lossTolerant>false</lossTolerant>
+                <runDurationNanos>0</runDurationNanos>
+                <autoTerminatedRelationships>
+                    <relationship>failure</relationship>
+                </autoTerminatedRelationships>
+            </processor>
+            <processor>
+                <id>AlertOnAnomaly</id>
+                <name>AlertOnAnomaly</name>
+                <position>
+                    <x>0</x>
+                    <y>1050</y>
+                </position>
+                <type>org.apache.nifi.processors.standard.RouteOnAttribute</type>
+                <bundle>
+                    <group>org.apache.nifi</group>
+                    <artifact>nifi-standard-nar</artifact>
+                    <version>1.16.0</version>
+                </bundle>
+                <property>
+                    <name>anomaly_detected</name>
+                    <value>${is_anomaly:equals(true)}</value>
+                </property>
+                <scheduling>
+                    <strategy>TIMER_DRIVEN</strategy>
+                    <period>0 sec</period>
+                    <concurrentTasks>1</concurrentTasks>
+                </scheduling>
+                <executionNode>ALL</executionNode>
+                <penaltyDuration>30 sec</penaltyDuration>
+                <yieldDuration>1 sec</yieldDuration>
+                <bulletinLevel>WARN</bulletinLevel>
+                <lossTolerant>false</lossTolerant>
+                <runDurationNanos>0</runDurationNanos>
+                <autoTerminatedRelationships>
+                    <relationship>unmatched</relationship>
+                </autoTerminatedRelationships>
+            </processor>
+            <processor>
+                <id>PublishAlert</id>
+                <name>PublishAlert</name>
+                <position>
+                    <x>0</x>
+                    <y>1200</y>
+                </position>
+                <type>org.apache.nifi.processors.kafka.pubsub.PublishKafkaRecord_2_0</type>
+                <bundle>
+                    <group>org.apache.nifi</group>
+                    <artifact>nifi-kafka-2-0-nar</artifact>
+                    <version>1.16.0</version>
+                </bundle>
+                <property>
+                    <name>bootstrap.servers</name>
+                    <value>kafka:9093</value>
+                </property>
+                <property>
+                    <name>topic</name>
+                    <value>warehouse-alerts</value>
+                </property>
+                <property>
+                    <name>record-reader</name>
+                    <value>JsonTreeReader</value>
+                </property>
+                <property>
+                    <name>record-writer</name>
+                    <value>JsonRecordSetWriter</value>
+                </property>
+                <property>
+                    <name>acks</name>
+                    <value>all</value>
+                </property>
+                <scheduling>
+                    <strategy>TIMER_DRIVEN</strategy>
+                    <period>0 sec</period>
+                    <concurrentTasks>1</concurrentTasks>
+                </scheduling>
+                <executionNode>ALL</executionNode>
+                <penaltyDuration>30 sec</penaltyDuration>
+                <yieldDuration>1 sec</yieldDuration>
+                <bulletinLevel>WARN</bulletinLevel>
+                <lossTolerant>false</lossTolerant>
+                <runDurationNanos>0</runDurationNanos>
+                <autoTerminatedRelationships>
+                    <relationship>failure</relationship>
+                </autoTerminatedRelationships>
+            </processor>
+        </processors>
+        <connections>
+            <connection>
+                <id>connection-1</id>
+                <name></name>
+                <sourceId>ConsumeKafka</sourceId>
+                <destinationId>UpdateAttribute</destinationId>
+                <backPressureDataSizeThreshold>1 GB</backPressureDataSizeThreshold>
+                <backPressureObjectThreshold>10000</backPressureObjectThreshold>
+                <bends/>
+                <loadBalanceStrategy>DO_NOT_LOAD_BALANCE</loadBalanceStrategy>
+                <loadBalancePartitionAttribute></loadBalancePartitionAttribute>
+                <loadBalanceCompression>DO_NOT_COMPRESS</loadBalanceCompression>
+                <loadBalanceStatus>LOAD_BALANCE_NOT_CONFIGURED</loadBalanceStatus>
+                <sourceRelationshipName>success</sourceRelationshipName>
+            </connection>
+            <connection>
+                <id>connection-2</id>
+                <name></name>
+                <sourceId>UpdateAttribute</sourceId>
+                <destinationId>SplitJson</destinationId>
+                <backPressureDataSizeThreshold>1 GB</backPressureDataSizeThreshold>
+                <backPressureObjectThreshold>10000</backPressureObjectThreshold>
+                <bends/>
+                <loadBalanceStrategy>DO_NOT_LOAD_BALANCE</loadBalanceStrategy>
+                <loadBalancePartitionAttribute></loadBalancePartitionAttribute>
+                <loadBalanceCompression>DO_NOT_COMPRESS</loadBalanceCompression>
+                <loadBalanceStatus>LOAD_BALANCE_NOT_CONFIGURED</loadBalanceStatus>
+                <sourceRelationshipName>success</sourceRelationshipName>
+            </connection>
+            <connection>
+                <id>connection-3</id>
+                <name></name>
+                <sourceId>SplitJson</sourceId>
+                <destinationId>EvaluateJsonPath</destinationId>
+                <backPressureDataSizeThreshold>1 GB</backPressureDataSizeThreshold>
+                <backPressureObjectThreshold>10000</backPressureObjectThreshold>
+                <bends/>
+                <loadBalanceStrategy>DO_NOT_LOAD_BALANCE</loadBalanceStrategy>
+                <loadBalancePartitionAttribute></loadBalancePartitionAttribute>
+                <loadBalanceCompression>DO_NOT_COMPRESS</loadBalanceCompression>
+                <loadBalanceStatus>LOAD_BALANCE_NOT_CONFIGURED</loadBalanceStatus>
+                <sourceRelationshipName>split</sourceRelationshipName>
+            </connection>
+            <connection>
+                <id>connection-4</id>
+                <name></name>
+                <sourceId>EvaluateJsonPath</sourceId>
+                <destinationId>RouteOnAttribute</destinationId>
+                <backPressureDataSizeThreshold>1 GB</backPressureDataSizeThreshold>
+                <backPressureObjectThreshold>10000</backPressureObjectThreshold>
+                <bends/>
+                <loadBalanceStrategy>DO_NOT_LOAD_BALANCE</loadBalanceStrategy>
+                <loadBalancePartitionAttribute></loadBalancePartitionAttribute>
+                <loadBalanceCompression>DO_NOT_COMPRESS</loadBalanceCompression>
+                <loadBalanceStatus>LOAD_BALANCE_NOT_CONFIGURED</loadBalanceStatus>
+                <sourceRelationshipName>matched</sourceRelationshipName>
+            </connection>
+            <connection>
+                <id>connection-5</id>
+                <name></name>
+                <sourceId>RouteOnAttribute</sourceId>
+                <destinationId>DetectAnomaly</destinationId>
+                <backPressureDataSizeThreshold>1 GB</backPressureDataSizeThreshold>
+                <backPressureObjectThreshold>10000</backPressureObjectThreshold>
+                <bends/>
+                <loadBalanceStrategy>DO_NOT_LOAD_BALANCE</loadBalanceStrategy>
+                <loadBalancePartitionAttribute></loadBalancePartitionAttribute>
+                <loadBalanceCompression>DO_NOT_COMPRESS</loadBalanceCompression>
+                <loadBalanceStatus>LOAD_BALANCE_NOT_CONFIGURED</loadBalanceStatus>
+                <sourceRelationshipName>temperature,humidity,motion,door_status,battery_level,weight,pressure</sourceRelationshipName>
+            </connection>
+            <connection>
+                <id>connection-6</id>
+                <name></name>
+                <sourceId>DetectAnomaly</sourceId>
+                <destinationId>PublishKafka</destinationId>
+                <backPressureDataSizeThreshold>1 GB</backPressureDataSizeThreshold>
+                <backPressureObjectThreshold>10000</backPressureObjectThreshold>
+                <bends/>
+                <loadBalanceStrategy>DO_NOT_LOAD_BALANCE</loadBalanceStrategy>
+                <loadBalancePartitionAttribute></loadBalancePartitionAttribute>
+                <loadBalanceCompression>DO_NOT_COMPRESS</loadBalanceCompression>
+                <loadBalanceStatus>LOAD_BALANCE_NOT_CONFIGURED</loadBalanceStatus>
+                <sourceRelationshipName>success</sourceRelationshipName>
+            </connection>
+            <connection>
+                <id>connection-7</id>
+                <name></name>
+                <sourceId>DetectAnomaly</sourceId>
+                <destinationId>AlertOnAnomaly</destinationId>
+                <backPressureDataSizeThreshold>1 GB</backPressureDataSizeThreshold>
+                <backPressureObjectThreshold>10000</backPressureObjectThreshold>
+                <bends/>
+                <loadBalanceStrategy>DO_NOT_LOAD_BALANCE</loadBalanceStrategy>
+                <loadBalancePartitionAttribute></loadBalancePartitionAttribute>
+                <loadBalanceCompression>DO_NOT_COMPRESS</loadBalanceCompression>
+                <loadBalanceStatus>LOAD_BALANCE_NOT_CONFIGURED</loadBalanceStatus>
+                <sourceRelationshipName>success</sourceRelationshipName>
+            </connection>
+            <connection>
+                <id>connection-8</id>
+                <name></name>
+                <sourceId>AlertOnAnomaly</sourceId>
+                <destinationId>PublishAlert</destinationId>
+                <backPressureDataSizeThreshold>1 GB</backPressureDataSizeThreshold>
+                <backPressureObjectThreshold>10000</backPressureObjectThreshold>
+                <bends/>
+                <loadBalanceStrategy>DO_NOT_LOAD_BALANCE</loadBalanceStrategy>
+                <loadBalancePartitionAttribute></loadBalancePartitionAttribute>
+                <loadBalanceCompression>DO_NOT_COMPRESS</loadBalanceCompression>
+                <loadBalanceStatus>LOAD_BALANCE_NOT_CONFIGURED</loadBalanceStatus>
+                <sourceRelationshipName>anomaly_detected</sourceRelationshipName>
+            </connection>
+            <connection>
+                <id>connection-9</id>
+                <name></name>
+                <sourceId>DetectAnomaly</sourceId>
+                <destinationId>EvaluateJsonPath</destinationId>
+                <backPressureDataSizeThreshold>1 GB</backPressureDataSizeThreshold>
+                <backPressureObjectThreshold>10000</backPressureObjectThreshold>
+                <bends/>
+                <loadBalanceStrategy>DO_NOT_LOAD_BALANCE</loadBalanceStrategy>
+                <loadBalancePartitionAttribute></loadBalancePartitionAttribute>
+                <loadBalanceCompression>DO_NOT_COMPRESS</loadBalanceCompression>
+                <loadBalanceStatus>LOAD_BALANCE_NOT_CONFIGURED</loadBalanceStatus>
+                <sourceRelationshipName>failure</sourceRelationshipName>
+            </connection>
+        </connections>
+    </snippet>
+    <timestamp>05/20/2025 12:00:00 UTC</timestamp>
+</template>
