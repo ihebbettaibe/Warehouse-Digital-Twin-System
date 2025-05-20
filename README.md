@@ -40,8 +40,6 @@ git clone https://github.com/ihebbettaibe/warehouse-digital-twin.git
 cd warehouse-digital-twin
 
 # Start the digital twin system
-./QuickStart.bat    # Interactive startup (Windows)
-# or
 ./scripts/Start.bat # Direct startup (Windows)
 # or
 ./start.sh          # Linux/Mac
