@@ -1,0 +1,43 @@
+{
+  "sensor_data": {
+    "sensor_id": "temp-001",
+    "sensor_type": "temperature",
+    "value": 22.5,
+    "timestamp": "2025-05-20T12:00:00.000Z",
+    "zone": "A1"
+  },
+  "processed_data": {
+    "sensor_id": "temp-001",
+    "sensor_type": "temperature",
+    "value": 42.1,
+    "timestamp": "2025-05-20T12:01:00.000Z",
+    "zone": "A1",
+    "is_anomaly": true
+  },
+  "alert": {
+    "sensor_id": "temp-001",
+    "sensor_type": "temperature",
+    "value": 42.1,
+    "timestamp": "2025-05-20T12:01:00.000Z",
+    "zone": "A1",
+    "is_anomaly": true
+  },
+  "ml_anomaly": {
+    "sensor_id": "temp-001",
+    "sensor_type": "temperature",
+    "value": 41.2,
+    "timestamp": "2025-05-20T12:02:00.000Z",
+    "zone": "A1",
+    "is_anomaly": true,
+    "anomaly_type": "ml"
+  },
+  "field_descriptions": {
+    "sensor_id": "Unique identifier for the sensor",
+    "sensor_type": "Type of sensor (e.g., temperature, humidity, motion, etc.)",
+    "value": "Measured value (number or string, depending on sensor)",
+    "timestamp": "ISO8601 timestamp (e.g., 2025-05-20T12:00:00.000Z)",
+    "zone": "Warehouse zone or location",
+    "is_anomaly": "Boolean, true if anomaly detected",
+    "anomaly_type": "String, 'rule-based', 'ml', or both (optional, for ML)"
+  }
+}
