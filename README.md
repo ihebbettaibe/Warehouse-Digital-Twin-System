@@ -1,162 +1,126 @@
-# Warehouse Digital Twin System
+# 🏭 Warehouse Digital Twin System
 
-This project implements a digital twin for warehouse operations, providing real-time monitoring, analysis, and visualization of sensor data.
+A comprehensive digital twin implementation for warehouse operations with real-time sensor data processing, anomaly detection using both rule-based and machine learning approaches, and a dynamic dashboard for monitoring.
 
-## Architecture
+![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)
+![Docker](https://img.shields.io/badge/docker-required-blue.svg)
+![License](https://img.shields.io/badge/license-MIT-green.svg)
+
+## 🌟 Features
+
+- **Real-time Sensor Monitoring:** Temperature, humidity, motion, pressure, door status, and more
+- **Automated Anomaly Detection:** Rule-based and machine learning approaches
+- **Interactive Dashboard:** Real-time visualization and alerting
+- **Scalable Architecture:** Microservice-based design using Docker containers
+- **Open Integration:** Standardized data formats and protocols
+
+## 🏗️ Architecture
+
+![Architecture Diagram](docs/images/architecture_diagram.md)
 
 The system consists of the following components:
 
-1. **Sensor Simulator**: A Python application that generates realistic sensor data mimicking warehouse operations
-2. **Apache NiFi**: Handles data ingestion and transformation
-3. **Apache Kafka**: Provides real-time data streaming capabilities
-4. **Machine Learning Detector**: Uses ML algorithms to identify complex anomalies in sensor data
-5. **Dashboard Application**: A Flask-based web application with real-time updates via WebSockets
+1. **Sensor Simulator:** Generates realistic warehouse sensor data
+2. **Apache NiFi:** Handles data ingestion and rule-based processing
+3. **Apache Kafka:** Enables real-time data streaming
+4. **Machine Learning Module:** Provides advanced anomaly detection
+5. **Dashboard Application:** Visualizes sensor data and alerts
 
-## Prerequisites
+## 🚀 Quick Start
+
+### Prerequisites
 
 - Docker Desktop and Docker Compose
 
-## Getting Started
+### Installation
 
-1. Clone this repository
-2. Navigate to the project directory
-3. Run the quickstart script:
-   ```powershell
-   .\QuickStart.ps1
-   ```
-   
-   Or for a command-line interface:
-   ```powershell
-   .\scripts\Start-DigitalTwin.ps1
-   ```
+```bash
+# Clone this repository
+git clone https://github.com/ihebbettaibe/warehouse-digital-twin.git
+cd warehouse-digital-twin
 
-This script will:
-- Check if Docker is running (and help you start it if needed)
-- Start all required services with docker-compose
-- Provide access links to the dashboard and NiFi UI
+# Start the digital twin system
+./QuickStart.bat    # Interactive startup (Windows)
+# or
+./scripts/Start.bat # Direct startup (Windows)
+# or
+./start.sh          # Linux/Mac
+```
 
-### Helper Scripts
+### Access
 
-We've provided several PowerShell scripts to make managing the system easier:
+- **Dashboard:** http://localhost:5000
+- **Apache NiFi UI:** http://localhost:8080/nifi
 
-- `Start-DigitalTwin.ps1`: Starts the entire system
-- `Stop-DigitalTwin.ps1`: Shuts down all services
-- `Check-Docker.ps1`: Verifies Docker is running
-- `Check-Services.ps1`: Monitors the status of all services
+## 🔧 Components
 
-> **Note**: When starting the system for the first time, services like NiFi may take 2-3 minutes to fully initialize. 
-> The dashboard may show no data until the entire pipeline is running.
+### Sensor Data
 
-## Accessing the System
+The system monitors various sensor types:
+- Temperature sensors (°C)
+- Humidity sensors (%)
+- Motion detectors
+- Pressure sensors (hPa)
+- Door status sensors
+- Weight sensors (kg)
+- Battery level monitors (%)
 
-- **Dashboard**: http://localhost:5000
-- **Apache NiFi UI**: http://localhost:8080/nifi/
+### Machine Learning
 
-## System Components
-
-### Sensor Simulator
-
-The sensor simulator generates data for various sensor types:
-- Temperature
-- Humidity
-- Motion detection
-- Pressure
-- Door status
-- Battery level
-- Weight
-
-Data is generated for different zones in the warehouse, with occasional anomalies to test the alerting system.
-
-### Apache NiFi Flow
-
-The NiFi flow:
-1. Consumes sensor data from Kafka
-2. Processes and transforms the data
-3. Detects anomalies using configurable thresholds
-4. Routes standard readings to the processed data topic
-5. Routes anomalies to a dedicated alerts topic
-
-### Kafka Topics
-
-- **warehouse-sensors-{sensor_type}**: Raw sensor readings by type
-- **warehouse-processed**: All processed sensor readings
-- **warehouse-alerts**: Rule-based detected anomalies
-- **warehouse-ml-anomalies**: Machine learning detected anomalies
+The ML module provides:
+- Unsupervised anomaly detection using Isolation Forest
+- Adaptive thresholds that evolve with data patterns
+- Multi-dimensional analysis of sensor correlations
+- Real-time anomaly scoring and classification
 
 ### Dashboard
 
 The dashboard provides:
-- Real-time visualization of sensor readings
-- Anomaly alerts and notifications
-- Zone-based overview of warehouse conditions
-- Historical data charting
+- Zone-based warehouse visualization
+- Real-time sensor readings
+- Historical data trends
+- Alert management
+- Anomaly visualization
 
-## Project Structure
+## 📊 Screenshots
+
+![Dashboard](docs/images/dashboard_preview.md)
+![NiFi Flow](docs/images/nifi_flow.md)
+![Anomaly Detection](docs/images/ml_anomaly.md)
+
+## 🛠️ Development
+
+### Project Structure
 
 ```
 warehouse-digital-twin/
-├── docker-compose.yml           # Main Docker Compose configuration
+├── docker-compose.yml           # Main configuration
+├── QuickStart.bat               # Interactive startup script (Windows)
+├── QuickStart.ps1               # PowerShell startup script
 ├── sensor_simulator/            # Sensor data simulator
-│   ├── sensor_simulator.py      # Generates realistic sensor data
-│   └── Dockerfile               # Builds simulator container
-├── nifi_flows/                  # NiFi flow templates
-│   └── digital_twin_flow.json   # Sensor data processing flow
-├── kafka_config/                # Kafka configuration files
+├── nifi_flows/                  # NiFi processing flows
 ├── machine_learning/            # ML-based anomaly detection
-│   ├── ml_detector.py           # ML service for anomaly detection
-│   ├── Dockerfile               # Builds ML container
-│   ├── requirements.txt         # Python dependencies
-│   ├── models/                  # Trained model storage
-│   ├── data/                    # Data storage and samples
-│   └── notebooks/               # Jupyter notebooks for analysis
-│       └── anomaly_detection_analysis.ipynb
-├── dashboard/                   # Real-time web dashboard
-│   ├── app.py                   # Flask application
-│   ├── templates/               # HTML templates
-│   │   └── index.html           # Dashboard UI
-│   ├── requirements.txt         # Python dependencies
-│   └── Dockerfile               # Builds dashboard container
-└── docker/                      # Additional Docker configuration
+├── dashboard/                   # Web dashboard
+├── docs/                        # Documentation
+└── scripts/                     # Utility scripts
+    ├── Start.bat                # Start the system (Windows)
+    ├── Start-DigitalTwin.ps1    # Start the system (PowerShell)
+    ├── Stop.bat                 # Stop the system (Windows)
+    ├── Stop-DigitalTwin.ps1     # Stop the system (PowerShell)
+    ├── CheckStatus.bat          # Check system status (Windows)
+    ├── Check-Services.ps1       # Check system status (PowerShell)
+    └── Setup-GitHub.ps1         # Initialize GitHub repository
 ```
 
-## Customization
-
-### Adding New Sensor Types
+### Adding New Sensors
 
 1. Add the sensor configuration to the `SENSOR_TYPES` dictionary in `sensor_simulator.py`
 2. Update the NiFi flow to process the new sensor type
-3. Modify the dashboard to display the new sensor data
+3. Add appropriate ML models if needed
+4. Modify the dashboard to display the new sensor data
 
-### Modifying Anomaly Detection Rules
+## 📝 License
 
-1. Edit the `DetectAnomaly` processor script in the NiFi flow
-2. Adjust the threshold values based on your requirements
+This project is licensed under the MIT License - see the LICENSE file for details.
 
-## Troubleshooting
 
-### Docker Connection Issues
-
-If you see an error like `unable to get image` or `error during connect`:
-1. Run the provided script to check Docker status: `.\Check-Docker.ps1`
-2. Make sure Docker Desktop is running (look for the Docker icon in your system tray)
-3. If Docker is not running, start Docker Desktop from your Start menu
-4. Wait for Docker to fully initialize before running docker-compose
-
-### Kafka Connection Issues
-
-If components can't connect to Kafka:
-1. Ensure Kafka container is running: `docker ps | grep kafka`
-2. Check Kafka logs: `docker logs kafka`
-3. Verify network connectivity between containers
-
-### NiFi Flow Not Processing Data
-
-1. Access the NiFi UI at http://localhost:8080/nifi/
-2. Check processor status and error messages
-3. Verify Kafka topics exist using a tool like kcat or Kafka UI
-
-### Dashboard Not Displaying Data
-
-1. Check browser console for errors
-2. Verify Kafka consumer is running in the dashboard logs
-3. Ensure data is flowing through the pipeline by checking Kafka topics
