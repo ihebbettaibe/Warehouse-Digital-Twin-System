@@ -1,0 +1,3 @@
+@echo off
+echo Stopping Warehouse Digital Twin System...
+powershell -ExecutionPolicy Bypass -File .\Stop-DigitalTwin.ps1

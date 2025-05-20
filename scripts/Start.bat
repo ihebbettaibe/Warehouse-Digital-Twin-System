@@ -1,0 +1,3 @@
+@echo off
+echo Starting Warehouse Digital Twin System...
+powershell -ExecutionPolicy Bypass -File .\Start-DigitalTwin.ps1

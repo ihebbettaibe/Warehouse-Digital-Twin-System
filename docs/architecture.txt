@@ -1,0 +1,16 @@
+graph TB
+    A[Sensor Simulator] -->|JSON data| B(Kafka Topics)
+    B --> C{NiFi}
+    C -->|Rule-based Processing| D[warehouse-processed]
+    C -->|Anomaly Detection| E[warehouse-alerts]
+    D --> F[ML Detector]
+    F -->|ML Anomalies| G[warehouse-ml-anomalies]
+    D --> H[Dashboard]
+    E --> H
+    G --> H
+    
+    style A fill:#f9f,stroke:#333,stroke-width:2px
+    style B fill:#bbf,stroke:#333,stroke-width:2px
+    style C fill:#9cf,stroke:#333,stroke-width:2px
+    style F fill:#fc9,stroke:#333,stroke-width:2px
+    style H fill:#9f9,stroke:#333,stroke-width:2px

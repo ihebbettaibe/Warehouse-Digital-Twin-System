@@ -1,0 +1,222 @@
+{
+  "comments": "Digital Twin NiFi Flow Template",
+  "processors": [
+    {
+      "name": "ConsumeKafka",
+      "type": "org.apache.nifi.processors.kafka.pubsub.ConsumeKafkaRecord_2_0",
+      "properties": {
+        "bootstrap.servers": "kafka:9093",
+        "topic_name": "warehouse-sensors-.*",
+        "topic_type": "pattern",
+        "record-reader": "JsonTreeReader",
+        "record-writer": "JsonRecordSetWriter",
+        "group.id": "nifi-digital-twin",
+        "auto.offset.reset": "latest"
+      },
+      "autoTerminatedRelationships": []
+    },
+    {
+      "name": "UpdateAttribute",
+      "type": "org.apache.nifi.processors.attributes.UpdateAttribute",
+      "properties": {
+        "topic": "${kafka.topic}"
+      },
+      "autoTerminatedRelationships": []
+    },
+    {
+      "name": "SplitJson",
+      "type": "org.apache.nifi.processors.standard.SplitJson",
+      "properties": {
+        "JsonPath Expression": "$.*"
+      },
+      "autoTerminatedRelationships": ["failure", "original"]
+    },
+    {
+      "name": "EvaluateJsonPath",
+      "type": "org.apache.nifi.processors.standard.EvaluateJsonPath",
+      "properties": {
+        "sensor_id": "$.sensor_id",
+        "sensor_type": "$.sensor_type",
+        "value": "$.value",
+        "timestamp": "$.timestamp",
+        "zone": "$.zone",
+        "Destination": "flowfile-attribute"
+      },
+      "autoTerminatedRelationships": ["failure"]
+    },
+    {
+      "name": "RouteOnAttribute",
+      "type": "org.apache.nifi.processors.standard.RouteOnAttribute",
+      "properties": {
+        "temperature": "${sensor_type:equals('temperature')}",
+        "humidity": "${sensor_type:equals('humidity')}",
+        "motion": "${sensor_type:equals('motion')}",
+        "door_status": "${sensor_type:equals('door_status')}",
+        "battery_level": "${sensor_type:equals('battery_level')}",
+        "weight": "${sensor_type:equals('weight')}",
+        "pressure": "${sensor_type:equals('pressure')}"
+      },
+      "autoTerminatedRelationships": ["unmatched"]
+    },
+    {
+      "name": "DetectAnomaly",
+      "type": "org.apache.nifi.processors.standard.ExecuteScript",
+      "properties": {
+        "Script Engine": "python",
+        "Script Body": "
+import json
+from org.apache.commons.io import IOUtils
+from java.nio.charset import StandardCharsets
+from org.apache.nifi.processor.io import StreamCallback
+
+class ModJSON(StreamCallback):
+    def __init__(self):
+        pass
+        
+    def process(self, inputStream, outputStream):
+        text = IOUtils.toString(inputStream, StandardCharsets.UTF_8)
+        obj = json.loads(text)
+        
+        # Add anomaly detection logic
+        is_anomaly = False
+        sensor_type = obj['sensor_type']
+        
+        try:
+            value = float(obj['value'])
+            
+            if sensor_type == 'temperature':
+                if value < 15 or value > 35:
+                    is_anomaly = True
+            elif sensor_type == 'humidity':
+                if value < 20 or value > 80:
+                    is_anomaly = True
+            elif sensor_type == 'pressure':
+                if value < 990 or value > 1030:
+                    is_anomaly = True
+            elif sensor_type == 'weight':
+                if value < 0 or value > 5000:
+                    is_anomaly = True
+        except (ValueError, TypeError):
+            # Handle case where value isn't a valid number
+            is_anomaly = True
+        
+        # Add anomaly flag - store as string for attribute compatibility
+        obj['is_anomaly'] = is_anomaly
+        
+        outputStream.write(bytearray(json.dumps(obj, indent=4).encode('utf-8')))
+
+flowFile = session.get()
+if flowFile != None:
+    try:
+        flowFile = session.write(flowFile, ModJSON())
+        # Write as flowfile attribute as well for routing
+        flowFile = session.putAttribute(flowFile, 'is_anomaly', 'true' if flowFile.getAttribute('is_anomaly') == 'true' else 'false')
+        session.transfer(flowFile, REL_SUCCESS)
+    except Exception as e:
+        session.transfer(flowFile, REL_FAILURE)
+        session.getProvenanceReporter().modifyContent(flowFile, \"Script execution failed: \" + str(e))
+"
+      },
+      "autoTerminatedRelationships": []
+    },
+    {
+      "name": "PublishKafka",
+      "type": "org.apache.nifi.processors.kafka.pubsub.PublishKafkaRecord_2_0",
+      "properties": {
+        "bootstrap.servers": "kafka:9093",
+        "topic": "warehouse-processed",
+        "record-reader": "JsonTreeReader",
+        "record-writer": "JsonRecordSetWriter",
+        "acks": "all"
+      },
+      "autoTerminatedRelationships": ["failure"]
+    },
+    {
+      "name": "AlertOnAnomaly",
+      "type": "org.apache.nifi.processors.standard.RouteOnAttribute",
+      "properties": {
+        "anomaly_detected": "${is_anomaly:equals(true)}"
+      },
+      "autoTerminatedRelationships": ["unmatched"]
+    },
+    {
+      "name": "PublishAlert",
+      "type": "org.apache.nifi.processors.kafka.pubsub.PublishKafkaRecord_2_0",
+      "properties": {
+        "bootstrap.servers": "kafka:9093",
+        "topic": "warehouse-alerts",
+        "record-reader": "JsonTreeReader",
+        "record-writer": "JsonRecordSetWriter",
+        "acks": "all"
+      },
+      "autoTerminatedRelationships": ["failure"]
+    }
+  ],
+  "connections": [
+    {
+      "from": "ConsumeKafka",
+      "to": "UpdateAttribute",
+      "relationship": "success"
+    },
+    {
+      "from": "UpdateAttribute",
+      "to": "SplitJson",
+      "relationship": "success"
+    },
+    {
+      "from": "SplitJson",
+      "to": "EvaluateJsonPath",
+      "relationship": "split"
+    },
+    {
+      "from": "EvaluateJsonPath",
+      "to": "RouteOnAttribute",
+      "relationship": "matched"
+    },
+    {
+      "from": "RouteOnAttribute",
+      "to": "DetectAnomaly",
+      "relationship": "temperature,humidity,motion,door_status,battery_level,weight,pressure"
+    },
+    {
+      "from": "DetectAnomaly",
+      "to": "PublishKafka",
+      "relationship": "success"
+    },
+    {
+      "from": "DetectAnomaly",
+      "to": "AlertOnAnomaly",
+      "relationship": "success"
+    },
+    {
+      "from": "AlertOnAnomaly",
+      "to": "PublishAlert",
+      "relationship": "anomaly_detected"
+    },
+    {
+      "from": "DetectAnomaly",
+      "to": "EvaluateJsonPath",
+      "relationship": "failure"
+    }
+  ],
+  "controllerServices": [
+    {
+      "name": "JsonTreeReader",
+      "type": "org.apache.nifi.json.JsonTreeReader",
+      "properties": {
+        "Date Format": "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",
+        "Timestamp Format": "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"
+      }
+    },
+    {
+      "name": "JsonRecordSetWriter",
+      "type": "org.apache.nifi.json.JsonRecordSetWriter",
+      "properties": {
+        "Schema Write Strategy": "no-schema",
+        "Date Format": "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",
+        "Timestamp Format": "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",
+        "Pretty Print JSON": "true"
+      }
+    }
+  ]
+}
